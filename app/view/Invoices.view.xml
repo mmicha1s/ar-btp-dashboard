@@ -1,0 +1,57 @@
+<mvc:View
+  controllerName="ar.app.controller.Invoices"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core"
+>
+  <Page id="invoicesPage" title="Invoices" showNavButton="true" navButtonPress="onBack">
+    <content>
+      <VBox class="sapUiMediumMargin">
+
+        <Toolbar>
+          <SearchField
+            id="searchField"
+            width="16rem"
+            placeholder="Customer or invoice number"
+            liveChange="onFilterChange"
+          />
+          <Select id="bucketSelect" change="onFilterChange" width="10rem">
+            <core:Item key="" text="All aging categories" />
+            <core:Item key="Paid" text="Paid" />
+            <core:Item key="Not Due" text="Not Due" />
+            <core:Item key="1-30" text="1-30" />
+            <core:Item key="31-60" text="31-60" />
+            <core:Item key="61-90" text="61-90" />
+            <core:Item key="90+" text="90+" />
+          </Select>
+        </Toolbar>
+
+        <Table id="invoicesTable" items="{invoices>/rows}" noDataText="No invoices match the filter">
+          <columns>
+            <Column><Text text="Invoice" /></Column>
+            <Column><Text text="Customer" /></Column>
+            <Column><Text text="Due date" /></Column>
+            <Column hAlign="End"><Text text="Amount" /></Column>
+            <Column hAlign="End"><Text text="Outstanding" /></Column>
+            <Column hAlign="End"><Text text="Days overdue" /></Column>
+            <Column><Text text="Aging category" /></Column>
+          </columns>
+          <items>
+            <ColumnListItem type="Active" press="onInvoicePress">
+              <cells>
+                <Text text="{invoices>number}" />
+                <Text text="{invoices>customerName}" />
+                <Text text="{invoices>dueDate}" />
+                <Text text="{invoices>amountText}" />
+                <Text text="{invoices>outstandingText}" />
+                <Text text="{invoices>daysOverdue}" />
+                <ObjectStatus text="{invoices>agingBucket}" state="{invoices>bucketState}" />
+              </cells>
+            </ColumnListItem>
+          </items>
+        </Table>
+
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>

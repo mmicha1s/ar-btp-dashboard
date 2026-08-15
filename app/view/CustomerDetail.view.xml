@@ -1,0 +1,49 @@
+<mvc:View
+  controllerName="ar.app.controller.CustomerDetail"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core"
+>
+  <Page id="customerPage" title="{customer>/name}" showNavButton="true" navButtonPress="onBack">
+    <content>
+      <VBox class="sapUiMediumMargin">
+
+        <Text text="Country: {customer>/country}" class="sapUiTinyMarginBottom" />
+
+        <HBox wrap="Wrap">
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Outstanding" />
+            <Text class="kpiValue" text="{customer>/outstanding}" />
+          </VBox>
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Overdue" />
+            <Text class="kpiValue" text="{customer>/overdue}" />
+          </VBox>
+        </HBox>
+
+        <Title text="Invoices" class="sapUiMediumMarginTop sapUiSmallMarginBottom" />
+        <Table items="{customer>/invoices}">
+          <columns>
+            <Column><Text text="Invoice" /></Column>
+            <Column><Text text="Due date" /></Column>
+            <Column hAlign="End"><Text text="Amount" /></Column>
+            <Column hAlign="End"><Text text="Outstanding" /></Column>
+            <Column><Text text="Status" /></Column>
+          </columns>
+          <items>
+            <ColumnListItem>
+              <cells>
+                <Text text="{customer>number}" />
+                <Text text="{customer>dueDate}" />
+                <Text text="{customer>amountText}" />
+                <Text text="{customer>outstandingText}" />
+                <ObjectStatus text="{customer>statusText}" state="{customer>bucketState}" />
+              </cells>
+            </ColumnListItem>
+          </items>
+        </Table>
+
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>

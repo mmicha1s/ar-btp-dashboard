@@ -1,0 +1,5 @@
+node_modules/
+*.sqlite
+cds-server.log
+cds-server.pid
+.git/

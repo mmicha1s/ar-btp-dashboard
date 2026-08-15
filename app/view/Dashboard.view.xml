@@ -1,0 +1,71 @@
+<mvc:View
+  controllerName="ar.app.controller.Dashboard"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core"
+>
+  <Page id="dashboardPage" title="Accounts Receivable">
+    <headerContent>
+      <Button text="Invoices" press="onShowInvoices" />
+    </headerContent>
+    <content>
+      <VBox class="sapUiMediumMargin">
+
+        <!-- KPI cards -->
+        <HBox wrap="Wrap">
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Outstanding" />
+            <Text class="kpiValue" text="{dashboard>/totalReceivables}" />
+          </VBox>
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Overdue" />
+            <Text class="kpiValue" text="{dashboard>/totalOverdue}" />
+          </VBox>
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Due this month" />
+            <Text class="kpiValue" text="{dashboard>/dueThisMonth}" />
+          </VBox>
+          <VBox class="kpiCard">
+            <Text class="kpiLabel" text="Overdue customers" />
+            <Text class="kpiValue" text="{dashboard>/overdueCustomers}" />
+          </VBox>
+        </HBox>
+
+        <!-- Aging buckets -->
+        <Title text="Aging" class="sapUiMediumMarginTop sapUiSmallMarginBottom" />
+        <List items="{dashboard>/aging}">
+          <CustomListItem>
+            <HBox class="sapUiTinyMargin" alignItems="Center">
+              <Text text="{dashboard>bucket}" width="5rem" />
+              <ProgressIndicator
+                width="20rem"
+                class="agingProgress sapUiTinyMarginBeginEnd"
+                percentValue="{dashboard>percent}"
+                displayValue="{dashboard>amount}"
+                state="{dashboard>state}"
+              />
+            </HBox>
+          </CustomListItem>
+        </List>
+
+        <!-- Top overdue customers -->
+        <Title text="Overdue customers" class="sapUiMediumMarginTop sapUiSmallMarginBottom" />
+        <Table items="{dashboard>/topOverdue}">
+          <columns>
+            <Column><Text text="Customer" /></Column>
+            <Column hAlign="End"><Text text="Overdue amount" /></Column>
+          </columns>
+          <items>
+            <ColumnListItem type="Active" press="onCustomerPress">
+              <cells>
+                <Text text="{dashboard>name}" />
+                <Text text="{dashboard>amount}" />
+              </cells>
+            </ColumnListItem>
+          </items>
+        </Table>
+
+      </VBox>
+    </content>
+  </Page>
+</mvc:View>
