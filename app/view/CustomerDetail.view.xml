@@ -29,6 +29,7 @@
             <Column hAlign="End"><Text text="Amount" /></Column>
             <Column hAlign="End"><Text text="Outstanding" /></Column>
             <Column><Text text="Status" /></Column>
+            <Column hAlign="End"><Text text="Action" /></Column>
           </columns>
           <items>
             <ColumnListItem>
@@ -38,6 +39,7 @@
                 <Text text="{customer>amountText}" />
                 <Text text="{customer>outstandingText}" />
                 <ObjectStatus text="{customer>statusText}" state="{customer>bucketState}" />
+                <Button text="Add payment" press="onAddPayment" enabled="{customer>canAddPayment}" />
               </cells>
             </ColumnListItem>
           </items>

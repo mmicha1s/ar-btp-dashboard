@@ -1,7 +1,14 @@
 sap.ui.define([
   "sap/ui/core/mvc/Controller",
-  "sap/ui/model/json/JSONModel"
-], function (Controller, JSONModel) {
+  "sap/ui/model/json/JSONModel",
+  "sap/m/Button",
+  "sap/m/DatePicker",
+  "sap/m/Dialog",
+  "sap/m/Input",
+  "sap/m/Label",
+  "sap/m/MessageBox",
+  "sap/m/MessageToast"
+], function (Controller, JSONModel, Button, DatePicker, Dialog, Input, Label, MessageBox, MessageToast) {
   "use strict";
 
   function bucketState(bucket) {
@@ -17,6 +24,7 @@ sap.ui.define([
     },
 
     loadCustomer: async function (customerId) {
+      this._customerId = customerId;
       var customerResponse = await fetch("/odata/v4/ar/Customers(" + customerId + ")");
       var customer = await customerResponse.json();
 
@@ -44,12 +52,15 @@ sap.ui.define([
         }
 
         rows.push({
+          id: invoice.ID,
           number: invoice.number,
           dueDate: invoice.dueDate,
           amountText: Number(invoice.amount).toFixed(2) + " " + invoice.currency,
           outstandingText: Number(invoice.outstanding).toFixed(2) + " " + invoice.currency,
           statusText: statusText,
-          bucketState: bucketState(invoice.agingBucket)
+          bucketState: bucketState(invoice.agingBucket),
+          outstanding: Number(invoice.outstanding),
+          canAddPayment: Number(invoice.outstanding) > 0
         });
       }
 
@@ -60,6 +71,74 @@ sap.ui.define([
         overdue: overdue.toFixed(2) + " EUR",
         invoices: rows
       });
+    },
+
+    onAddPayment: function (event) {
+      var invoice = event.getSource().getBindingContext("customer").getObject();
+      var controller = this;
+      var amountInput = new Input({
+        type: "Number",
+        value: invoice.outstanding.toFixed(2)
+      });
+      var dateInput = new DatePicker({
+        value: new Date().toISOString().slice(0, 10),
+        valueFormat: "yyyy-MM-dd",
+        displayFormat: "yyyy-MM-dd"
+      });
+      var dialog = new Dialog({
+        title: "Add payment for " + invoice.number,
+        contentWidth: "24rem",
+        content: [
+          new Label({ text: "Payment date" }),
+          dateInput,
+          new Label({ text: "Amount in EUR" }),
+          amountInput
+        ],
+        beginButton: new Button({
+          text: "Save",
+          type: "Emphasized",
+          press: async function () {
+            var amount = Number(amountInput.getValue());
+            if (!Number.isFinite(amount) || amount <= 0) {
+              MessageBox.error("Enter a payment amount greater than zero.");
+              return;
+            }
+
+            var response = await fetch("/odata/v4/ar/addPayment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                invoiceId: invoice.id,
+                paymentDate: dateInput.getValue(),
+                amount: amount
+              })
+            });
+
+            if (!response.ok) {
+              var result = await response.json();
+              MessageBox.error(result.error && result.error.message
+                ? result.error.message
+                : "Payment could not be saved.");
+              return;
+            }
+
+            dialog.close();
+            MessageToast.show("Payment saved.");
+            await controller.loadCustomer(controller._customerId);
+          }
+        }),
+        endButton: new Button({
+          text: "Cancel",
+          press: function () {
+            dialog.close();
+          }
+        }),
+        afterClose: function () {
+          dialog.destroy();
+        }
+      });
+
+      dialog.open();
     },
 
     onBack: function () {

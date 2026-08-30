@@ -4,6 +4,11 @@ A small finance dashboard built as a learning project. It tracks customers, invo
 
 Live demo: https://ar-dashboard.cfapps.us10-001.hana.ondemand.com
 
+## Latest update - 30 August 2026
+
+- Added payment entry with balance validation
+- Added automated tests for aging and payments
+
 ## What it shows
 
 - Total open receivables
@@ -13,6 +18,7 @@ Live demo: https://ar-dashboard.cfapps.us10-001.hana.ondemand.com
 - Overdue customers
 - Invoice list with search and filtering
 - Customer details
+- Payment entry with balance validation
 
 ## How it works
 
@@ -53,4 +59,4 @@ I used AI as a learning and pair-programming tool while building this project. I
 
 - Store data in SAP HANA Cloud
 - Add user roles and sign-in
-- Allow users to add payments
+- Add payment history

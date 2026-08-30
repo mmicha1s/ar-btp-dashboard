@@ -1,86 +1,41 @@
-const AGING_BUCKETS = ['Not Due', '1-30', '31-60', '61-90', '90+'];
+const cds = require('@sap/cds');
+const {
+  AGING_BUCKETS,
+  addCalculatedFields,
+  validatePayment
+} = require('./ar-calculations');
 
-function getAgingBucket(daysOverdue) {
-  if (daysOverdue <= 0) return 'Not Due';
-  if (daysOverdue <= 30) return '1-30';
-  if (daysOverdue <= 60) return '31-60';
-  if (daysOverdue <= 90) return '61-90';
-  return '90+';
-}
-
-function getDaysOverdue(dueDate) {
-  const today = new Date();
-  const todayMidnight = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-
-  const due = new Date(dueDate);
-  const dueMidnight = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-
-  const oneDay = 1000 * 60 * 60 * 24;
-  const diff = Math.round((todayMidnight - dueMidnight) / oneDay);
-  return diff > 0 ? diff : 0;
-}
-
-// Adds outstanding / daysOverdue / agingBucket to each invoice, in place.
-async function addCalculatedFields(invoices) {
+async function enrichInvoices(invoices) {
   const payments = await SELECT.from('ar.Payments');
-  const paidByInvoice = {};
-
-  for (const payment of payments) {
-    const invoiceId = payment.invoice_ID;
-    if (!paidByInvoice[invoiceId]) {
-      paidByInvoice[invoiceId] = 0;
-    }
-    paidByInvoice[invoiceId] += Number(payment.amount);
-  }
-
-  for (const invoice of invoices) {
-    const paid = paidByInvoice[invoice.ID] || 0;
-    const outstanding = Math.max(0, Number(invoice.amount) - paid);
-
-    invoice.outstanding = outstanding;
-    if (outstanding === 0) {
-      invoice.daysOverdue = null;
-      invoice.agingBucket = 'Paid';
-      continue;
-    }
-
-    invoice.daysOverdue = getDaysOverdue(invoice.dueDate);
-    invoice.agingBucket = getAgingBucket(invoice.daysOverdue);
-  }
+  addCalculatedFields(invoices, payments);
 }
 
 module.exports = function () {
   const { Invoices } = this.entities;
 
-  // Every time invoices are read via OData, enrich them with the calculated fields.
-  this.after('READ', Invoices, async (invoices) => {
+  this.after('READ', Invoices, async invoices => {
     if (!invoices) return;
-    const list = Array.isArray(invoices) ? invoices : [invoices];
-    await addCalculatedFields(list);
+    await enrichInvoices(Array.isArray(invoices) ? invoices : [invoices]);
   });
 
   this.on('getARSummary', async () => {
     const invoices = await SELECT.from('ar.Invoices');
-    await addCalculatedFields(invoices);
+    await enrichInvoices(invoices);
 
     const today = new Date();
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
     let totalReceivables = 0;
     let totalOverdue = 0;
     let dueThisMonth = 0;
-    const overdueCustomerIds = [];
+    const overdueCustomerIds = new Set();
 
     for (const invoice of invoices) {
       if (invoice.outstanding <= 0) continue;
 
       totalReceivables += invoice.outstanding;
-
       if (invoice.agingBucket !== 'Not Due') {
         totalOverdue += invoice.outstanding;
-        if (!overdueCustomerIds.includes(invoice.customer_ID)) {
-          overdueCustomerIds.push(invoice.customer_ID);
-        }
+        overdueCustomerIds.add(invoice.customer_ID);
       }
 
       const dueDate = new Date(invoice.dueDate);
@@ -93,24 +48,43 @@ module.exports = function () {
       totalReceivables,
       totalOverdue,
       dueThisMonth,
-      overdueCustomers: overdueCustomerIds.length
+      overdueCustomers: overdueCustomerIds.size
     };
   });
 
   this.on('getAgingSummary', async () => {
     const invoices = await SELECT.from('ar.Invoices');
-    await addCalculatedFields(invoices);
+    await enrichInvoices(invoices);
 
-    const result = [];
-    for (const bucket of AGING_BUCKETS) {
-      let amount = 0;
-      for (const invoice of invoices) {
-        if (invoice.outstanding > 0 && invoice.agingBucket === bucket) {
-          amount += invoice.outstanding;
-        }
-      }
-      result.push({ bucket, amount });
+    return AGING_BUCKETS.map(bucket => ({
+      bucket,
+      amount: invoices
+        .filter(invoice => invoice.outstanding > 0 && invoice.agingBucket === bucket)
+        .reduce((total, invoice) => total + invoice.outstanding, 0)
+    }));
+  });
+
+  this.on('addPayment', async req => {
+    const invoice = await SELECT.one.from('ar.Invoices').where({ ID: req.data.invoiceId });
+    if (!invoice) return req.reject(404, 'Invoice not found.');
+
+    await enrichInvoices([invoice]);
+
+    let amount;
+    try {
+      amount = validatePayment(req.data.amount, invoice.outstanding);
+    } catch (error) {
+      return req.reject(400, error.message);
     }
-    return result;
+
+    const payment = {
+      ID: cds.utils.uuid(),
+      invoice_ID: invoice.ID,
+      paymentDate: req.data.paymentDate || new Date().toISOString().slice(0, 10),
+      amount
+    };
+
+    await INSERT.into('ar.Payments').entries(payment);
+    return payment;
   });
 };
