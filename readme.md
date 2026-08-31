@@ -2,8 +2,6 @@
 
 A small finance dashboard built as a learning project. It tracks customers, invoices and payments, then shows what is still due and overdue.
 
-Live demo: https://ar-dashboard.cfapps.us10-001.hana.ondemand.com
-
 ## Latest update - 30 August 2026
 
 - Added payment entry with balance validation
